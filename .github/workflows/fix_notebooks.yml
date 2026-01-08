@@ -1,4 +1,4 @@
-name: Fix notebooks metadata (widgets.state)
+name: Fix and validate notebooks metadata (widgets)
 
 permissions:
   contents: write
@@ -13,39 +13,38 @@ jobs:
   fix-notebooks:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: true
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install nbformat
 
-      - name: Run notebook fixer (add_state)
+      - name: Run fixer (remove widgets)
         run: |
-          python scripts/fix_widgets_state.py --path . --mode add_state
+          python scripts/fix_widgets_state.py --path . --mode remove
         id: fixer
 
-      - name: Show git status and diff
+      - name: Show git status/diff
         run: |
           git status --porcelain
           git --no-pager diff || true
 
-      - name: Commit & push changes (if any)
+      - name: Commit & push if changed
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add -A
-            git commit -m "chore(notebooks): fix metadata.widgets (add state) [automated]" || echo "nothing to commit"
+            git commit -m "chore(notebooks): remove metadata.widgets to fix nbconvert validation [automated]" || echo "nothing to commit"
             git push
           else
             echo "No changes to commit"
