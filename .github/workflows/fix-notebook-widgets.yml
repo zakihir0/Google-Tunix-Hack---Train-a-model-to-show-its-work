@@ -1,0 +1,58 @@
+name: Fix ipynb widget metadata
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Patch notebooks (add missing state)
+        id: patch
+        shell: bash
+        run: |
+          set -e
+          shopt -s globstar nullglob
+
+          changed=0
+          for f in **/*.ipynb; do
+            tmp="$(mktemp)"
+            jq '.metadata.widgets["application/vnd.jupyter.widget-state+json"].state //= {}' "$f" > "$tmp"
+
+            if ! cmp -s "$f" "$tmp"; then
+              mv "$tmp" "$f"
+              changed=1
+              echo "patched: $f"
+            else
+              rm "$tmp"
+            fi
+          done
+
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Commit changes
+        if: steps.patch.outputs.changed == '1'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Auto-fix ipynb widget metadata for GitHub rendering"
+          git push
