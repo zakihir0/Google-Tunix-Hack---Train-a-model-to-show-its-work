@@ -1,0 +1,62 @@
+name: Sanitize notebooks and push branch
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '**/*.ipynb'
+
+jobs:
+  sanitize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install nbformat
+
+      - name: Run sanitizer (dry-run first)
+        run: |
+          python scripts/sanitize_notebooks.py --path . --pattern '**/*.ipynb' --dry-run
+
+      - name: Run sanitizer (apply changes)
+        id: sanitize
+        run: |
+          set -e
+          python scripts/sanitize_notebooks.py --path . --pattern '**/*.ipynb'
+          # show git status/diff
+          git status --porcelain
+          git --no-pager diff || true
+
+      - name: Create branch & commit if changed
+        if: steps.sanitize.outcome == 'success'
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            BRANCH=sanitize-notebooks/$(date -u +"%Y%m%dT%H%M%SZ")
+            git checkout -b $BRANCH
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "chore(notebooks): sanitize .ipynb files (remove widget metadata/outputs) [automated]" || echo "nothing to commit"
+            git push --set-upstream origin $BRANCH
+            echo "Pushed branch: $BRANCH"
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Print final info
+        run: |
+          echo "Done. If any notebooks remain invalid the job will have failed earlier and logs include validation messages."
