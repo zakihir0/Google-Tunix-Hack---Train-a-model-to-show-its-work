@@ -2,7 +2,7 @@ name: Fix ipynb widget metadata
 
 on:
   push:
-    branches: [ main ]
+    branches: [ experiment ]
   workflow_dispatch:
 
 permissions:
