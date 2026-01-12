@@ -80,9 +80,4 @@ The experiment proves that for small-scale models like Gemma-3 1B, **Discipline 
 * **Dynamic Weighting:** Implementing a curriculum where format constraints are introduced only after the model masters the reasoning discipline.
 * **Semantic Auditing:** Moving beyond regex-based rewards to LLM-as-a-judge rewards within the Tunix pipeline to detect "Semantic Flips" (e.g., confusing "failed" with "remained").
 
----
-
-## **6. Attached Resources**
-
-Notebook: [Link to Public Kaggle Notebook]
 
